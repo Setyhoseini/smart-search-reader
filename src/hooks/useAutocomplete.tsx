@@ -79,7 +79,7 @@ export function useAutocomplete({
   // Handlers
   const handleInputChange = useCallback(
     (newValue: string) => {
-      // ✅ Re-enable autocomplete when user types forward
+      // Re-enable autocomplete when user types forward
       if (newValue.length > originalQuery.length) {
         setAutocompleteDisabled(false);
       }
