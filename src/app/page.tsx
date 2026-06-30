@@ -75,7 +75,7 @@ export default function Home() {
                   {currentMatchIndex + 1} / {totalMatches}
                 </span>
               )}
-              <Image src="/line-vertical.svg" width={24} height={24} />
+              <Image src="/line-vertical.svg" width={24} height={24} alt="separator" />
               <button onClick={goToPrev} disabled={totalMatches === 0}>
                 <Image
                   src="/chevron.svg"
