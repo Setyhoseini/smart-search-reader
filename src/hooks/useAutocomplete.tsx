@@ -79,10 +79,15 @@ export function useAutocomplete({
   // Handlers
   const handleInputChange = useCallback(
     (newValue: string) => {
+      // ✅ Re-enable autocomplete when user types forward
+      if (newValue.length > originalQuery.length) {
+        setAutocompleteDisabled(false);
+      }
+
       setOriginalQuery(newValue);
       onSearchChange(newValue);
     },
-    [onSearchChange],
+    [onSearchChange, originalQuery.length],
   );
 
   const handleSelectSuggestion = useCallback(
