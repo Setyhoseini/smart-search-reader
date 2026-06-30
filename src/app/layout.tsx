@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { sampleText } from "@/data/sampleText";
+import { SearchProvider } from "../hooks/useSearchContext";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -12,11 +14,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`h-full antialiased`}
-    >
-      <body className="h-full flex flex-col">{children}</body>
+    <html lang="en" className={`h-full antialiased`}>
+      <SearchProvider initialText={sampleText}>
+        <body className="h-full flex flex-col">{children}</body>
+      </SearchProvider>
     </html>
   );
 }
