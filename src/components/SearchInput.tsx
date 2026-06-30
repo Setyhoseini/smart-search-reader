@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import SearchSuggestions from "./SearchSuggestions";
 import { getSuggestions } from "@/utils/search";
@@ -28,52 +28,47 @@ export default function SearchInput({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isOpen, setIsOpen] = useState(false);
   const [originalQuery, setOriginalQuery] = useState(searchTerm);
-  const [lastCharWasBackspace, setLastCharWasBackspace] = useState(false);
+  const [autocompleteDisabled, setAutocompleteDisabled] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ Compute display value
-  const displayValue = useCallback(() => {
-    // When backspace was pressed, show ONLY the original query (no autocomplete)
-    if (lastCharWasBackspace) {
-      return originalQuery;
-    }
+  const capitalize = (value: string) =>
+    value.charAt(0).toUpperCase() + value.slice(1);
 
+  const displayValue = (() => {
     if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
       return suggestions[selectedIndex];
     }
 
-    if (!isOpen || suggestions.length === 0) {
+    if (autocompleteDisabled || !isOpen || suggestions.length === 0) {
       return originalQuery;
     }
 
     const first = suggestions[0];
-    if (first.toLowerCase().startsWith(originalQuery.toLowerCase())) {
-      return first;
-    }
-    return originalQuery;
-  }, [
-    originalQuery,
-    suggestions,
-    isOpen,
-    selectedIndex,
-    lastCharWasBackspace,
-  ])();
 
-  // ✅ Update suggestions - NOW ALSO HANDLES SYNCING WITH searchTerm
+    if (first.toLowerCase().startsWith(originalQuery.toLowerCase())) {
+      return originalQuery + first.slice(originalQuery.length);
+    }
+
+    return originalQuery;
+  })();
+
+  // ✅ FIX: Combined effect with debounce and sync
   useEffect(() => {
     const timer = setTimeout(() => {
-      // ✅ Sync with parent's searchTerm if needed (WITHOUT cascading renders)
+      // ✅ Sync with parent's searchTerm here (debounced)
       if (searchTerm !== originalQuery) {
         setOriginalQuery(searchTerm);
       }
 
-      // ✅ No suggestions when backspace was pressed
-      if (originalQuery.trim() && !lastCharWasBackspace) {
-        const newSuggestions = getSuggestions(text, originalQuery, 8);
+      if (originalQuery.trim() && !autocompleteDisabled) {
+        const newSuggestions = getSuggestions(text, originalQuery, 8).map(
+          capitalize,
+        );
+
         setSuggestions(newSuggestions);
-        setIsOpen(true);
+        setIsOpen(newSuggestions.length > 0);
         setSelectedIndex(-1);
       } else {
         setSuggestions([]);
@@ -83,69 +78,87 @@ export default function SearchInput({
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [originalQuery, text, searchTerm, lastCharWasBackspace]);
+  }, [originalQuery, text, autocompleteDisabled, searchTerm]); // ← Added searchTerm
+
+  // ❌ REMOVED the problematic useEffect
+  // useEffect(() => {
+  //   if (searchTerm !== originalQuery) {
+  //     setOriginalQuery(searchTerm);
+  //   }
+  // }, [searchTerm]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-
-    const isTypingForward = newValue.length > originalQuery.length;
-
-    if (isTypingForward) {
-      setLastCharWasBackspace(false);
-    }
 
     setOriginalQuery(newValue);
     onSearchChange(newValue);
   };
 
-  // ✅ Handle keydown
+  const isPrintableKey = (e: React.KeyboardEvent<HTMLInputElement>) =>
+    e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    const committed = capitalize(suggestion);
+
+    setOriginalQuery(committed);
+    onSearchChange(committed);
+
+    setSuggestions([]);
+    setIsOpen(false);
+    setSelectedIndex(-1);
+    setAutocompleteDisabled(false);
+
+    requestAnimationFrame(() => {
+      const len = committed.length;
+
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(len, len);
+    });
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Backspace while autocomplete is active
-    const hasAutocomplete =
-      displayValue !== originalQuery && selectedIndex === -1 && isOpen;
-
-    if (e.key === "Backspace" && hasAutocomplete) {
-      e.preventDefault();
-
-      // Keep only what user actually typed
-      onSearchChange(originalQuery);
-
-      // Disable autocomplete + suggestions
-      setSuggestions([]);
-      setIsOpen(false);
-      setSelectedIndex(-1);
-      setLastCharWasBackspace(true);
-
-      // Remove any selection
-      requestAnimationFrame(() => {
-        inputRef.current?.setSelectionRange(
-          originalQuery.length,
-          originalQuery.length,
-        );
-      });
-
-      return;
+    // Re‑enable autocomplete when user types a character
+    if (isPrintableKey(e)) {
+      setAutocompleteDisabled(false);
     }
 
-    if (e.key === "Backspace") {
-      setLastCharWasBackspace(true);
-    } else {
-      setLastCharWasBackspace(false);
+    // Backspace or Delete: disable autocomplete and close suggestions
+    if (e.key === "Backspace" || e.key === "Delete") {
+      // Check if there's an active autocomplete suffix
+      const hasSuffix =
+        !autocompleteDisabled &&
+        displayValue !== originalQuery &&
+        selectedIndex === -1 &&
+        isOpen;
+
+      if (hasSuffix) {
+        e.preventDefault(); // Prevent default deletion
+        setSuggestions([]);
+        setIsOpen(false);
+        setSelectedIndex(-1);
+        setAutocompleteDisabled(true);
+
+        // Move cursor to the end of the typed part
+        requestAnimationFrame(() => {
+          const len = originalQuery.length;
+          inputRef.current?.focus();
+          inputRef.current?.setSelectionRange(len, len);
+        });
+      } else {
+        // Simply disable autocomplete; normal deletion will occur
+        setAutocompleteDisabled(true);
+      }
+      return; // Don't process arrow keys after backspace
     }
 
     if (e.key === "Escape") {
+      setSuggestions([]);
       setIsOpen(false);
       setSelectedIndex(-1);
       return;
     }
 
-    if (!isOpen || suggestions.length === 0 || lastCharWasBackspace) {
-      if (e.key === "Enter" && originalQuery.trim()) {
-        e.preventDefault();
-        if (displayValue !== originalQuery) {
-          handleSelectSuggestion(displayValue);
-        }
-      }
+    if (!isOpen || suggestions.length === 0) {
       return;
     }
 
@@ -154,17 +167,16 @@ export default function SearchInput({
       setSelectedIndex((prev) =>
         prev < suggestions.length - 1 ? prev + 1 : prev,
       );
-    } else if (e.key === "ArrowUp") {
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-        handleSelectSuggestion(suggestions[selectedIndex]);
-      } else if (displayValue !== originalQuery) {
-        handleSelectSuggestion(displayValue);
-      }
-    } else if (e.key === "Tab") {
+      return;
+    }
+
+    if (e.key === "Enter" || e.key === "Tab") {
       e.preventDefault();
       if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
         handleSelectSuggestion(suggestions[selectedIndex]);
@@ -174,41 +186,29 @@ export default function SearchInput({
     }
   };
 
-  // ✅ Highlight the auto-completed part - ONLY when NOT backspacing
   useEffect(() => {
-    // Skip highlighting when backspace was pressed
-    if (lastCharWasBackspace) {
+    if (autocompleteDisabled || !inputRef.current) {
       return;
     }
 
-    if (inputRef.current) {
-      const start = originalQuery.length;
-      const end = displayValue.length;
-      if (
-        displayValue !== originalQuery &&
-        isOpen &&
-        start < end &&
-        selectedIndex === -1
-      ) {
-        inputRef.current.setSelectionRange(start, end);
-      }
+    const start = originalQuery.length;
+    const end = displayValue.length;
+
+    if (
+      displayValue !== originalQuery &&
+      isOpen &&
+      selectedIndex === -1 &&
+      start < end
+    ) {
+      inputRef.current.setSelectionRange(start, end);
     }
   }, [
     displayValue,
     originalQuery,
     isOpen,
     selectedIndex,
-    lastCharWasBackspace,
+    autocompleteDisabled,
   ]);
-
-  const handleSelectSuggestion = (suggestion: string) => {
-    setOriginalQuery(suggestion);
-    onSearchChange(suggestion);
-    setIsOpen(false);
-    setSelectedIndex(-1);
-    setLastCharWasBackspace(false);
-    inputRef.current?.focus();
-  };
 
   const handleSuggestionHighlight = (index: number) => {
     setSelectedIndex(index);
@@ -222,14 +222,13 @@ export default function SearchInput({
       ) {
         setIsOpen(false);
         setSelectedIndex(-1);
-        setLastCharWasBackspace(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // ✅ REMOVED the problematic useEffect - now handled inside the debounced effect above
 
   return (
     <div className="relative" ref={containerRef}>
@@ -245,25 +244,28 @@ export default function SearchInput({
             if (
               originalQuery.trim() &&
               suggestions.length > 0 &&
-              !lastCharWasBackspace
+              !autocompleteDisabled
             ) {
               setIsOpen(true);
             }
           }}
           className="w-full px-4 py-3 text-lg font-semibold border-2 border-gray-900 placeholder-blue-900 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         />
+
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
           {originalQuery && currentMatchIndex !== null && totalMatches > 0 && (
             <span className="text-gray-600 font-medium text-sm">
               {currentMatchIndex + 1}/{totalMatches}
             </span>
           )}
+
           <Image
             src="/line-vertical.svg"
             width={24}
             height={24}
             alt="Separator"
           />
+
           <button
             onClick={onPrev}
             disabled={totalMatches === 0}
@@ -277,6 +279,7 @@ export default function SearchInput({
               className="rotate-270"
             />
           </button>
+
           <button
             onClick={onNext}
             disabled={totalMatches === 0}
@@ -299,7 +302,7 @@ export default function SearchInput({
         selectedIndex={selectedIndex}
         onSelect={handleSelectSuggestion}
         onHighlight={handleSuggestionHighlight}
-        isOpen={isOpen && suggestions.length > 0 && !lastCharWasBackspace}
+        isOpen={isOpen && suggestions.length > 0}
       />
     </div>
   );
