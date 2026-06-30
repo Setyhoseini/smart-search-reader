@@ -18,7 +18,7 @@ export default function Home() {
 
   return (
     <div className="max-h-screen flex flex-col flex-1 items-center justify-center bg-blue-300 font-sans text-black">
-      <div className="h-full mx-6 flex flex-col w-full max-w-4xl">
+      <div className="h-full mx-6 px-5 flex flex-col w-full max-w-4xl">
         <div className="my-4">
           <div className="flex w-full justify-between items-center text-center mt-3 mb-5">
             <h1 className="text-3xl font-bold">Smart Search Reader</h1>

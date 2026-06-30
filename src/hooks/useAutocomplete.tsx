@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getSuggestions } from '@/utils/search';
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { getSuggestions } from "@/utils/search";
 
 interface UseAutocompleteProps {
   initialQuery?: string;
@@ -9,7 +9,7 @@ interface UseAutocompleteProps {
 }
 
 export function useAutocomplete({
-  initialQuery = '',
+  initialQuery = "",
   text,
   onSearchChange,
   externalSearchTerm,
@@ -52,12 +52,17 @@ export function useAutocomplete({
   useEffect(() => {
     const timer = setTimeout(() => {
       // Sync with external search term if provided
-      if (externalSearchTerm !== undefined && externalSearchTerm !== originalQuery) {
+      if (
+        externalSearchTerm !== undefined &&
+        externalSearchTerm !== originalQuery
+      ) {
         setOriginalQuery(externalSearchTerm);
       }
 
       if (originalQuery.trim() && !autocompleteDisabled) {
-        const newSuggestions = getSuggestions(text, originalQuery, 8).map(capitalize);
+        const newSuggestions = getSuggestions(text, originalQuery, 8).map(
+          capitalize,
+        );
         setSuggestions(newSuggestions);
         setIsOpen(newSuggestions.length > 0);
         setSelectedIndex(-1);
@@ -72,112 +77,145 @@ export function useAutocomplete({
   }, [originalQuery, text, autocompleteDisabled, externalSearchTerm]);
 
   // Handlers
-  const handleInputChange = useCallback((newValue: string) => {
-    setOriginalQuery(newValue);
-    onSearchChange(newValue);
-    // Typing forward re-enables autocomplete
-    if (autocompleteDisabled) {
-      setAutocompleteDisabled(false);
-    }
-  }, [onSearchChange, autocompleteDisabled]);
+  const handleInputChange = useCallback(
+    (newValue: string) => {
+      setOriginalQuery(newValue);
+      onSearchChange(newValue);
+    },
+    [onSearchChange],
+  );
 
-  const handleSelectSuggestion = useCallback((suggestion: string) => {
-    const committed = capitalize(suggestion);
-    setOriginalQuery(committed);
-    onSearchChange(committed);
-    setSuggestions([]);
-    setIsOpen(false);
-    setSelectedIndex(-1);
-    setAutocompleteDisabled(false);
-    // Move cursor to end
-    requestAnimationFrame(() => {
-      const len = committed.length;
-      inputRef.current?.focus();
-      inputRef.current?.setSelectionRange(len, len);
-    });
-  }, [onSearchChange]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Re-enable autocomplete on printable characters
-    const isPrintableKey = (event: React.KeyboardEvent) =>
-      event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
-    if (isPrintableKey(e)) {
-      setAutocompleteDisabled(false);
-    }
-
-    // Backspace or Delete: disable autocomplete and optionally remove suffix
-    if (e.key === 'Backspace' || e.key === 'Delete') {
-      const hasSuffix = !autocompleteDisabled &&
-        displayValue !== originalQuery &&
-        selectedIndex === -1 &&
-        isOpen;
-
-      if (hasSuffix) {
-        e.preventDefault();
-        setSuggestions([]);
-        setIsOpen(false);
-        setSelectedIndex(-1);
-        setAutocompleteDisabled(true);
-        requestAnimationFrame(() => {
-          const len = originalQuery.length;
-          inputRef.current?.focus();
-          inputRef.current?.setSelectionRange(len, len);
-        });
-      } else {
-        setAutocompleteDisabled(true);
-      }
-      return;
-    }
-
-    // Escape: close dropdown
-    if (e.key === 'Escape') {
+  const handleSelectSuggestion = useCallback(
+    (suggestion: string) => {
+      const committed = capitalize(suggestion);
+      setOriginalQuery(committed);
+      onSearchChange(committed);
       setSuggestions([]);
       setIsOpen(false);
       setSelectedIndex(-1);
-      return;
-    }
+      setAutocompleteDisabled(false);
+      // Move cursor to end
+      requestAnimationFrame(() => {
+        const len = committed.length;
+        inputRef.current?.focus();
+        inputRef.current?.setSelectionRange(len, len);
+      });
+    },
+    [onSearchChange],
+  );
 
-    // If dropdown closed or no suggestions, do nothing else
-    if (!isOpen || suggestions.length === 0) return;
-
-    // Arrow navigation
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
-    } else if (e.key === 'Enter' || e.key === 'Tab') {
-      e.preventDefault();
-      if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-        handleSelectSuggestion(suggestions[selectedIndex]);
-      } else if (displayValue !== originalQuery) {
-        handleSelectSuggestion(displayValue);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Re-enable autocomplete on printable characters
+      const isPrintableKey = (event: React.KeyboardEvent) =>
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey;
+      if (isPrintableKey(e)) {
+        setAutocompleteDisabled(false);
       }
-    }
-  }, [autocompleteDisabled, displayValue, originalQuery, isOpen, suggestions, selectedIndex, handleSelectSuggestion]);
+
+      // Backspace or Delete: disable autocomplete and optionally remove suffix
+      if (e.key === "Backspace" || e.key === "Delete") {
+        const hasSuffix =
+          !autocompleteDisabled &&
+          displayValue !== originalQuery &&
+          selectedIndex === -1 &&
+          isOpen;
+
+        if (hasSuffix) {
+          e.preventDefault();
+          setSuggestions([]);
+          setIsOpen(false);
+          setSelectedIndex(-1);
+          setAutocompleteDisabled(true);
+          requestAnimationFrame(() => {
+            const len = originalQuery.length;
+            inputRef.current?.focus();
+            inputRef.current?.setSelectionRange(len, len);
+          });
+        } else {
+          setAutocompleteDisabled(true);
+        }
+        return;
+      }
+
+      // Escape: close dropdown
+      if (e.key === "Escape") {
+        setSuggestions([]);
+        setIsOpen(false);
+        setSelectedIndex(-1);
+        return;
+      }
+
+      // If dropdown closed or no suggestions, do nothing else
+      if (!isOpen || suggestions.length === 0) return;
+
+      // Arrow navigation
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev,
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          handleSelectSuggestion(suggestions[selectedIndex]);
+        } else if (displayValue !== originalQuery) {
+          handleSelectSuggestion(displayValue);
+        }
+      }
+    },
+    [
+      autocompleteDisabled,
+      displayValue,
+      originalQuery,
+      isOpen,
+      suggestions,
+      selectedIndex,
+      handleSelectSuggestion,
+    ],
+  );
 
   // Selection highlight
   useEffect(() => {
     if (autocompleteDisabled || !inputRef.current) return;
     const start = originalQuery.length;
     const end = displayValue.length;
-    if (displayValue !== originalQuery && isOpen && selectedIndex === -1 && start < end) {
+    if (
+      displayValue !== originalQuery &&
+      isOpen &&
+      selectedIndex === -1 &&
+      start < end
+    ) {
       inputRef.current.setSelectionRange(start, end);
     }
-  }, [displayValue, originalQuery, isOpen, selectedIndex, autocompleteDisabled]);
+  }, [
+    displayValue,
+    originalQuery,
+    isOpen,
+    selectedIndex,
+    autocompleteDisabled,
+  ]);
 
   // Click outside
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
         setSelectedIndex(-1);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Expose
