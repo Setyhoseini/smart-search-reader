@@ -7,9 +7,7 @@ import { useMemo, useRef, useState } from "react";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentMatchIndex, setCurrentMatchIndex] = useState<number | null>(
-    null,
-  );
+  const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(0);
   const matchRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   const segments = useMemo(() => {
@@ -65,12 +63,15 @@ export default function Home() {
               type="text"
               placeholder="Type a keyword..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentMatchIndex(0);
+              }}
               className="w-full px-4 py-2 mb-4 font-semibold border-2 border-gray-900 placeholder-blue-900 text-black text-[18px] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {/* Now absolute works perfectly relative to THIS div */}
             <div className="absolute right-3 top-1/2 -translate-y-5 flex items-center gap-2">
-              {searchTerm && currentMatchIndex && (
+              {searchTerm && (
                 <span className="text-gray-800">
                   {currentMatchIndex + 1} / {totalMatches}
                 </span>
