@@ -1,5 +1,6 @@
 "use client";
 
+import SearchInput from "@/components/SearchInput";
 import { sampleText } from "@/data/sampleText";
 import { getHighlightedSegments } from "@/utils/highlight";
 import Image from "next/image";
@@ -56,47 +57,15 @@ export default function Home() {
               alt="Smart Search Reader"
             />
           </div>
-          <div className="relative">
-            {" "}
-            {/* ✅ Correct Tailwind class */}
-            <input
-              type="text"
-              placeholder="Type a keyword..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentMatchIndex(0);
-              }}
-              className="w-full px-4 py-2 mb-4 font-semibold border-2 border-gray-900 placeholder-blue-900 text-black text-[18px] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {/* Now absolute works perfectly relative to THIS div */}
-            <div className="absolute right-3 top-1/2 -translate-y-5 flex items-center gap-2">
-              {searchTerm && (
-                <span className="text-gray-800">
-                  {currentMatchIndex + 1} / {totalMatches}
-                </span>
-              )}
-              <Image src="/line-vertical.svg" width={24} height={24} alt="separator" />
-              <button onClick={goToPrev} disabled={totalMatches === 0}>
-                <Image
-                  src="/chevron.svg"
-                  width={24}
-                  height={24}
-                  alt="Previous"
-                  className="rotate-270 text-amber-200"
-                />
-              </button>
-              <button onClick={goToNext} disabled={totalMatches === 0}>
-                <Image
-                  src="/chevron.svg"
-                  width={24}
-                  height={24}
-                  alt="Next"
-                  className="rotate-90"
-                />
-              </button>
-            </div>
-          </div>
+          <SearchInput
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            totalMatches={totalMatches}
+            currentMatchIndex={currentMatchIndex}
+            onPrev={goToPrev}
+            onNext={goToNext}
+            text={sampleText}
+          />
         </div>
         <div className="max-w-4xl mb-12 mx-auto p-6 text-[18px] overflow-y-auto bg-white shadow-lg rounded-xl">
           <p className="whitespace-pre-wrap leading-relaxed">
