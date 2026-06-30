@@ -65,7 +65,7 @@ export default function SearchInput({
               // We'll let the hook manage it.
             }
           }}
-          className="w-full px-4 py-3 text-lg font-semibold border-2 border-gray-900 placeholder-blue-900 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full px-4 py-3 text-lg font-semibold border-2 border-gray-900 placeholder-blue-900 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white pr-40"
         />
 
         {/* Navigation Arrows */}
