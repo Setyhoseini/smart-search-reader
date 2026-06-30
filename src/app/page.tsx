@@ -70,7 +70,7 @@ export default function Home() {
             />
             {/* Now absolute works perfectly relative to THIS div */}
             <div className="absolute right-3 top-1/2 -translate-y-5 flex items-center gap-2">
-              {searchTerm && (
+              {searchTerm && currentMatchIndex && (
                 <span className="text-gray-800">
                   {currentMatchIndex + 1} / {totalMatches}
                 </span>
