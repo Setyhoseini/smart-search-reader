@@ -1,23 +1,21 @@
 // next.config.ts
 import type { NextConfig } from 'next';
+import withSerwistInit from '@serwist/next';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: false, // <-- We'll handle this manually for background updates
-  clientsClaim: false, // <-- We'll handle this manually
-  disable: process.env.NODE_ENV === 'development',
+const withSerwist = withSerwistInit({
+  swSrc: 'src/app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV !== 'production', // ← Only enable in production
 });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  output: 'export', // <-- Essential for generating a static list of files
-  distDir: 'dist', // <-- Optional, but keeps things clean
-  images: {
-    unoptimized: true, // Required for static export
-  },
+  output: 'export',
+  distDir: 'dist',
   turbopack: {},
+  images: {
+    unoptimized: true,
+  },
 };
 
-export default withPWA(nextConfig);
+export default withSerwist(nextConfig);
